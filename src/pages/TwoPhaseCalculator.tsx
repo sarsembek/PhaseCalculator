@@ -107,9 +107,9 @@ const TwoPhaseCalculator: React.FC = () => {
   };
 
   return (
-    <div className="py-10 bg-gradient-to-r from-purple-300 to-blue-500">
+    <div className="md:py-10 bg-gradient-to-r from-purple-300 to-blue-500">
       <Card className="max-w-4xl mx-auto shadow-md p-6">
-        <h1 className="text-3xl font-bold text-purple-700 mb-6 text-center">
+        <h1 className="md:text-3xl font-bold text-purple-700 mb-6 text-center">
           Two-Phase Separator Calculator
         </h1>
         <div className="space-y-6">
@@ -147,7 +147,7 @@ const TwoPhaseCalculator: React.FC = () => {
             </h2>
             <ol className="list-decimal space-y-4 pl-6 text-purple-800">
               {steps.map((step, index) => (
-                <li key={index} className="leading-relaxed whitespace-pre-line">
+                <li key={index} className="text-sm md:text-base leading-relaxed whitespace-pre-line">
                   <ReactMarkdown>{step}</ReactMarkdown>
                 </li>
               ))}

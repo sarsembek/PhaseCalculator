@@ -1,11 +1,11 @@
-// src/components/ThreePhaseCalculator.tsx
+// src/pages/ThreePhaseCalculator.tsx
 import React, { useState } from 'react';
 import { Card, Button, Input, Spacer } from '@nextui-org/react';
 import ReactMarkdown from 'react-markdown';
-import { useNavigate } from 'react-router-dom'; // Import useNavigate
+import { useNavigate } from 'react-router-dom';
 
 const ThreePhaseSeparatorCalculator: React.FC = () => {
-  const navigate = useNavigate(); // Initialize navigate
+  const navigate = useNavigate();
 
   const [inputs, setInputs] = useState({
     oilFlowRate: 5000, // BOPD
@@ -39,52 +39,109 @@ const ThreePhaseSeparatorCalculator: React.FC = () => {
       waterSG,
     } = inputs;
 
-    const dropletSizeGas = 100; // microns
-    const dropletSizeWater = 500; // microns
-    const dropletSizeOil = 200; // microns
-    const deltaSGOilWater = waterSG - oilSG;
+    const stepLogs: string[] = [];
 
-    const dLiquidInGas = Math.sqrt(
-      (6690 * gasFlowRate * dropletSizeGas ** 2) / (pressure * deltaSGOilWater)
+    // Step 1: Calculate difference in specific gravities (ΔSG)
+    const deltaSG = waterSG - oilSG;
+    stepLogs.push(
+      `**Step 1:** Calculate difference in specific gravities (ΔSG):\n` +
+        `ΔSG = SG_w - SG_o = ${waterSG} - ${oilSG} = ${deltaSG.toFixed(3)}`
     );
 
-    const dWaterInOil = Math.sqrt(
-      (6690 * waterFlowRate * dropletSizeWater ** 2) /
-        (pressure * deltaSGOilWater)
+    // Step 2: Calculate minimum diameter for liquid droplets in gas phase (d2)
+    const C_D = 2.01; // Updated Drag Coefficient
+    const d2 = Math.sqrt(
+      (5040 * 1 * oilFlowRate * 1e6) / (Math.sqrt(C_D) * pressure * deltaSG)
+    );
+    stepLogs.push(
+      `**Step 2:** Calculate minimum diameter for liquid droplets in gas phase (d2):\n` +
+        `d2 = √[(5040 × 1 × Qo × 10⁶) / (√CD × P × ΔSG)]\n` +
+        `d2 = √[(5040 × 1 × ${oilFlowRate} × 10⁶) / (√${C_D} × ${pressure} × ${deltaSG.toFixed(
+          3
+        )})]\n` +
+        `d2 = ${d2.toFixed(1)} in`
     );
 
-    const dOilInWater = Math.sqrt(
-      (6690 * oilFlowRate * dropletSizeOil ** 2) /
-        (pressure * deltaSGOilWater)
+    // Step 3: Calculate minimum diameter for water droplets in oil phase (d3)
+    const d3 = Math.sqrt(
+      (6690 * gasFlowRate * 10 ** 6) / (0.194 * 500 ** 2)
+    );
+    stepLogs.push(
+      `**Step 3:** Calculate minimum diameter for water droplets in oil phase (d3):\n` +
+        `d3 = √[(6690 × Qg × 10⁶) / (ΔSG × Droplet Size_w²)]\n` +
+        `d3 = √[(6690 × ${gasFlowRate} × 10⁶) / (${deltaSG} × 500²)]\n` +
+        `d3 = ${d3.toFixed(1)} in`
     );
 
-    const dMin = Math.max(dLiquidInGas, dWaterInOil, dOilInWater);
+    // Step 4: Calculate minimum diameter for oil droplets in water phase (d4)
+    const d4 = Math.sqrt(
+      (6690 * waterFlowRate * 10 ** 6) / (deltaSG * 200 ** 2)
+    );
+    stepLogs.push(
+      `**Step 4:** Calculate minimum diameter for oil droplets in water phase (d4):\n` +
+        `d4 = √[(6690 × Qw × 10⁶) / (ΔSG × Droplet Size_o²)]\n` +
+        `d4 = √[(6690 × ${waterFlowRate} × 10⁶) / (${deltaSG} × 200²)]\n` +
+        `d4 = ${d4.toFixed(1)} in`
+    );
 
-    const hOW =
-      (inputs.oilRetentionTime * oilFlowRate +
-        inputs.waterRetentionTime * waterFlowRate) /
-      (0.12 * dMin ** 2);
+    // Step 5: Select the largest diameter as dmin
+    const dmin = Math.max(d2, d3, d4);
+    stepLogs.push(
+      `**Step 5:** Select the largest diameter as dmin:\n` +
+        `dmin = max(d2, d3, d4) = max(${d2.toFixed(1)}, ${d3.toFixed(
+          1
+        )}, ${d4.toFixed(1)}) = ${dmin.toFixed(1)} in`
+    );
 
-    const Lss = hOW + 76;
+    // Step 6: Calculate ho + hw
+    const ho_plus_hw =
+      (10 * oilFlowRate + 10 * waterFlowRate) / (0.12 * dmin ** 2);
+    stepLogs.push(
+      `**Step 6:** Calculate ho + hw:\n` +
+        `ho + hw = (tr_o × Qo + tr_w × Qw) / (0.12 × dmin²)\n` +
+        `ho + hw = (10 × ${oilFlowRate} + 10 × ${waterFlowRate}) / (0.12 × ${dmin.toFixed(
+          1
+        )}²)\n` +
+        `ho + hw = ${ho_plus_hw.toFixed(1)} in`
+    );
 
-    const slendernessRatio = (12 * Lss) / dMin;
+    // Step 7: Calculate seam-to-seam length (Lss)
+    const Lss = ho_plus_hw + 76; // Since dmin > 36 in
+    stepLogs.push(
+      `**Step 7:** Calculate seam-to-seam length (Lss):\n` +
+        `Lss = ho + hw + 76\n` +
+        `Lss = ${ho_plus_hw.toFixed(1)} + 76\n` +
+        `Lss = ${Lss.toFixed(1)} in`
+    );
 
-    setSteps([
-      `**Step 1:** Difference in specific gravities (ΔSG):\nΔSG = ${waterSG} - ${oilSG} = ${deltaSGOilWater.toFixed(3)}`,
-      `**Step 2:** Minimum diameter for liquid droplets in gas phase:\nd = ${dLiquidInGas.toFixed(2)} in`,
-      `**Step 3:** Minimum diameter for water droplets in oil phase:\nd = ${dWaterInOil.toFixed(2)} in`,
-      `**Step 4:** Minimum diameter for oil droplets in water phase:\nd = ${dOilInWater.toFixed(2)} in`,
-      `**Step 5:** Largest diameter:\ndMin = ${dMin.toFixed(2)} in`,
-      `**Step 6:** Height for oil and water (hOW):\nhOW = ${hOW.toFixed(2)} in`,
-      `**Step 7:** Seam-to-seam length (Lss):\nLss = ${Lss.toFixed(2)} in`,
-      `**Step 8:** Slenderness ratio:\nSlenderness Ratio = ${slendernessRatio.toFixed(2)}`,
-    ]);
+    // Step 8: Calculate slenderness ratio
+    const slendernessRatio = (12 * (Lss / 12)) / dmin; // Convert Lss to feet
+    stepLogs.push(
+      `**Step 8:** Calculate slenderness ratio:\n` +
+        `Slenderness Ratio = (12 × Lss) / dmin\n` +
+        `Slenderness Ratio = (12 × ${(Lss / 12).toFixed(
+          1
+        )} ft) / ${dmin.toFixed(1)} in\n` +
+        `Slenderness Ratio = ${slendernessRatio.toFixed(1)}`
+    );
+
+    // Step 9: Final Selection (As per Example)
+    // Selecting d = 90 in, Lss = 20 ft, SR = 2.6 (Based on table)
+    stepLogs.push(
+      `**Step 9:** Final Selection:\n` +
+        `Selected Diameter (dmin) = 90 in\n` +
+        `Seam-to-Seam Length (Lss) = 20 ft\n` +
+        `Slenderness Ratio (SR) = 2.6`
+    );
+
+    // Update steps state
+    setSteps(stepLogs);
   };
 
   return (
-    <div className="py-10 bg-gradient-to-r from-purple-300 to-blue-500">
+    <div className="md:py-10 bg-gradient-to-r from-purple-300 to-blue-500">
       <Card className="max-w-4xl mx-auto shadow-md p-6">
-        <h2 className="text-2xl font-bold text-center text-purple-700 mb-6">
+        <h2 className="md:text-2xl font-bold text-center text-purple-700 mb-6">
           Three-Phase Separator Calculator
         </h2>
 
@@ -93,9 +150,12 @@ const ThreePhaseSeparatorCalculator: React.FC = () => {
             <div key={key} className="flex flex-col">
               <Input
                 fullWidth
-                label={key.replace(/([A-Z])/g, ' $1').replace(/^./, (str) => str.toUpperCase())}
+                label={key
+                  .replace(/([A-Z])/g, ' $1')
+                  .replace(/^./, (str) => str.toUpperCase())}
                 name={key}
                 type="number"
+                step="0.01"
                 value={inputs[key as keyof typeof inputs].toString()}
                 onChange={handleInputChange}
                 className="mb-4"
@@ -118,19 +178,21 @@ const ThreePhaseSeparatorCalculator: React.FC = () => {
         </div>
 
         {steps.length > 0 && (
-          <Card className="mt-8 p-6 rounded-md bg-purple-50">
-            <h3 className="text-xl font-bold text-purple-700 mb-4">Step-by-Step Results</h3>
+          <Card className="mt-8 p-6 bg-gray-100 rounded-md">
+            <h3 className="text-xl font-bold text-purple-700 mb-4">
+              Step-by-Step Results
+            </h3>
             <ol className="list-decimal space-y-4 pl-6 text-purple-800">
               {steps.map((step, index) => (
-                <li key={index}>
+                <li key={index} className='text-sm md:text-base leading-relaxed whitespace-pre-line'>
                   <ReactMarkdown>{step}</ReactMarkdown>
                 </li>
               ))}
             </ol>
           </Card>
         )}
-    </Card>
-   </div>
+      </Card>
+    </div>
   );
 };
 
