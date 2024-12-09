@@ -88,14 +88,14 @@ const ThreePhaseSeparatorCalculator: React.FC = () => {
     );
 
     // Step 4: Calculate Minimum Diameter for Water Droplets in Oil Phase (d3)
-    const d3Numerator = 6690 * gasFlowRate * 1e4;
+    const d3Numerator = 6690 * oilFlowRate * 10;
     const d3Denominator = deltaSG * Math.pow(dropletSizeWater, 2);
     const d3 = Math.sqrt(d3Numerator / d3Denominator);
 
     stepLogs.push(
       `**Step 4:** Calculate Minimum Diameter for Water Droplets in Oil Phase (d3):\n` +
-        `Formula: d3 = √[(6690 × Qg × 10⁶) / (ΔSG × Droplet Size_w²)]\n` +
-        `Substitute: d3 = √[(6690 × ${gasFlowRate} × 10⁶) / (${deltaSG} × ${dropletSizeWater}²)]\n` +
+        `Formula: d3 = √[(6690 × Qg × 10) / (ΔSG × Droplet Size_w²)]\n` +
+        `Substitute: d3 = √[(6690 × ${oilFlowRate} × 10) / (${deltaSG} × ${dropletSizeWater}²)]\n` +
         `d3 = ${d3.toFixed(1)} in`
     );
 
